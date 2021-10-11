@@ -1,0 +1,30 @@
+{
+    "sheets": [
+        {
+            "active": true,
+            "name": "1",
+            "path": "",
+            "output_path": "./myDocumentUpdated.xlsx",
+            "columns": [
+                "title",
+                "url",
+                "sales_in_cash",
+                "sales",
+                "average_sales",
+                "price",
+                "average_price",
+                "free_shipping",
+                "type_of_post",
+                "state",
+                "stock"
+            ],
+            "fetching_params": [
+                "price",
+                "average_price",
+                "free_shipping",
+                "state",
+                "stock"
+            ]
+        }
+    ]
+}
