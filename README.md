@@ -28,36 +28,26 @@ Aquí ira la información de las hojas de cálculo.  Estan estructuradas en una 
 
 
 ```javascript
-{
-    "sheets": [
         {
-            "active": true, 
-            "name": "1",
-            "path": "",
+            "active": true,
+            "name": "a",
+            "path": "./example.xlsx",
             "output_path": "./myDocumentUpdated.xlsx",
+            "hyperlink_in":"title",
+            "column_date_value": "sales",
             "columns": [
                 "title",
-                "url",
-                "sales_in_cash",
-                "sales",
-                "average_sales",
                 "price",
-                "average_price",
-                "free_shipping",
+                "sales",
+                "nickname",
                 "type_of_post",
-                "state",
-                "stock"
+                "date"
             ],
             "fetching_params": [
                 "price",
-                "average_price",
-                "free_shipping",
-                "state",
-                "stock"
+                "sales"
             ]
         }
-    ]
-}
 ```
 
 ### Corriendo nuestro script 🤖

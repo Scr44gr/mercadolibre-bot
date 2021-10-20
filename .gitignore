@@ -130,6 +130,7 @@ dmypy.json
 
 # test bot
 ./mercado-libre-bot
+*.xlsx
 
 # vscode settings
 .vscode/*

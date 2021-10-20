@@ -1,15 +1,24 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from src.commons import get_maximum_rows
 from src.mercadolibre import MercadoLibre
 from src.utils import params_format
 from src.xlsx import ExcelFile
+from src.utils import DATE_TO
 from re import search
 import json
 from logging import getLogger, basicConfig
 from logging import INFO
+from datetime import datetime
 
 
-def extract_ids_from_excel(filename: str, sheet_name: str, column) -> List[str]:
+def get_uuid(target: str) -> str:
+    if not isinstance(target, str):
+        target = target.hyperlink.target
+    return search(r'MLC(.[\d]*)', target).group().replace('-', '')
+
+
+
+def extract_ids_from_excel(filename: str, sheet_name: str, column, hyperlink=False) -> List[str]:
 
     excel = ExcelFile(filename)
     sheet = excel.select_sheet(sheet_name)
@@ -17,11 +26,16 @@ def extract_ids_from_excel(filename: str, sheet_name: str, column) -> List[str]:
     ids = []
 
     for row_index in range(row_count):
-        url = sheet.cell(row=row_index+1, column=column+1).value
-        if len(url) >= 1:
-            id = search(r'MLC(.[\d]*)', url).group().replace('-', '')
-            ids.append(id)
+        data = sheet.cell(row=row_index+1, column=column+1)
 
+        if hyperlink:
+            url = data.hyperlink            
+        else:
+            url = data.value
+        if url is not None and url.target is not None:
+            if len(url.target) >= 1:
+                id = get_uuid(url.target)
+                ids.append(id)
     return ids
 
 def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[Dict]:
@@ -29,29 +43,40 @@ def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[
 
     for item in data:
         item = item['body']
-        payload = {'title':item.get('title')}
+        uuid = item.get('id')
+        payload = {uuid: {}}
         for param in fetching_params:
             try:
                 if param == 'free_shipping':
-                    free_shipping = params_format[param](item)
-                    payload[param] = 'Si' if free_shipping else 'No' # quick fix
+                    free_shipping = params_format[uuid][param](item)
+                    payload[uuid][param] = 'Si' if free_shipping else 'No' # quick fix
                 else:
-                    payload[param] = item[params_format[param]]
+                    payload[uuid][param] = item[params_format[param]]
             except KeyError:
                 continue
         list_reference(payload)
 
-def update_excel(filename: str, sheet_name: str, data: List[Dict], get_column ) -> None:
+
+def update_excel(filename: str, sheet_name: str, data: List[Dict], get_column, column_date_value: Union[str, bool]) -> None:
 
     excel = ExcelFile(filename)
     sheet = excel.select_sheet(sheet_name)
-
-    for (i, item) in enumerate(data):
-
-        title = sheet.cell(row=i+1, column=get_column('title')+1).value
-        if title == item.pop('title'):
+    
+    for i in range(len(data)):
+        try:
+            column_uuid = get_uuid(sheet.cell(row=i+1, column=get_column('title')+1))
+            item = data[column_uuid]
             for key in item:
-                sheet.cell(row=i+1, column=get_column(key)+1).value = item[key]
+                p_key = key
+                if key == 'sales' and column_date_value:
+                    key = 'date'
+                sheet.cell(row=i+1, column=get_column(key)+1).value = item[p_key]
+        except AttributeError:
+            continue
+    if column_date_value is not None and len(column_date_value) >=1:
+        date = datetime.now()
+        sheet.cell(row=1, column=get_column('date')+1).value = f'{date.day}-{DATE_TO[str(date.month)][0:3]}'
+    
     return excel.worksheet
 
 def main() -> None:
@@ -69,6 +94,8 @@ def main() -> None:
                 document_output_path: str = sheet.get('output_path')
                 columns_names: List[str] = sheet.get('columns')
                 fetching_params: List[str] = sheet.get('fetching_params')
+                hyperlink_in : Union[str, bool] = sheet.get('hyperlink_in')
+                column_date_value: bool = sheet.get('column_date_value')
                 
                 logger.info(f'[*] getting ids from {sheet_name} sheet')
                 # we need to obtain the urls from the excel to extract the ids..
@@ -78,7 +105,10 @@ def main() -> None:
                 column = lambda key:[i for (i, cn) in enumerate(columns_names) if cn == key][0]
                 
                 # extract all urls from the excel sheet
-                ids = extract_ids_from_excel(document_path, sheet_name, column('url'))
+                if hyperlink_in:
+                    ids = extract_ids_from_excel(document_path, sheet_name, column(hyperlink_in), hyperlink=True)
+                else:
+                    ids = extract_ids_from_excel(document_path, sheet_name, column('url'))
                 
                 if len(ids) >= MercadoLibre.MAX_IDS_SIZE:
                     logger.info('[*] fetching data..')
@@ -86,8 +116,8 @@ def main() -> None:
                     idx = list(range(0, len(ids)))[::MercadoLibre.MAX_IDS_SIZE]
                     idx_size = len(idx)
                     
-                    in_memory_data = []
-                    add_to_memory = lambda d: in_memory_data.append(d)
+                    in_memory_data = {}
+                    add_to_memory = lambda d: in_memory_data.update(d)
                     for sub_idx in range(0, idx_size):
                         try:
                             if sub_idx+1 >= idx_size:
@@ -99,15 +129,14 @@ def main() -> None:
                             parse_data(response, fetching_params, add_to_memory)
                         except IndexError:
                             break
-                    
                     logger.info('[*] done!')
                     logger.info('[*] updating excel..')
                     logger.info(f'[*] output path {document_output_path}')
 
-                    update_excel(document_path, sheet_name, in_memory_data, column).save(document_output_path)
+                    update_excel(document_path, sheet_name, in_memory_data, column, column_date_value=column_date_value).save(document_output_path)
                     logger.info(f'[+] document updated!')
-                    _ = input('/> press enter to exit')
-    except KeyError:
+        _ = input('/> press enter to exit')
+    except TypeError:
         raise Exception('Bad format on settings.json')
 
 if __name__ == '__main__':
