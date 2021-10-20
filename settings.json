@@ -6,7 +6,7 @@
             "path": "./example.xlsx",
             "output_path": "./myDocumentUpdated.xlsx",
             "hyperlink_in":"title",
-            "column_date_value": "sales",
+            "column_date_value": "date",
             "columns": [
                 "title",
                 "price",

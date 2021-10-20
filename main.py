@@ -36,6 +36,7 @@ def extract_ids_from_excel(filename: str, sheet_name: str, column, hyperlink=Fal
             if len(url.target) >= 1:
                 id = get_uuid(url.target)
                 ids.append(id)
+    excel.worksheet.close()
     return ids
 
 def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[Dict]:
@@ -75,9 +76,10 @@ def update_excel(filename: str, sheet_name: str, data: List[Dict], get_column, c
             continue
     if column_date_value is not None and len(column_date_value) >=1:
         date = datetime.now()
-        sheet.cell(row=1, column=get_column('date')+1).value = f'{date.day}-{DATE_TO[str(date.month)][0:3]}'
+        sheet.cell(row=1, column=get_column(column_date_value)+1).value = f'{date.day}-{DATE_TO[str(date.month)][0:3]}'
     
-    return excel.worksheet
+    context = lambda filename: (excel.worksheet.save(filename), excel.worksheet.close())
+    return context
 
 def main() -> None:
     logger = getLogger('main')
@@ -133,11 +135,12 @@ def main() -> None:
                     logger.info('[*] updating excel..')
                     logger.info(f'[*] output path {document_output_path}')
 
-                    update_excel(document_path, sheet_name, in_memory_data, column, column_date_value=column_date_value).save(document_output_path)
+                    update_excel(document_path, sheet_name, in_memory_data, column, column_date_value=column_date_value)(document_output_path)
                     logger.info(f'[+] document updated!')
         _ = input('/> press enter to exit')
     except TypeError:
         raise Exception('Bad format on settings.json')
+
 
 if __name__ == '__main__':
     FORMAT = '%(asctime)-15s %(message)s'
