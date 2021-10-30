@@ -51,13 +51,12 @@ class MercadoLibre:
 
         """
 
-        response = requests.get(self.url)
+        response = requests.get(self.url, headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0'})
 
         if response.status_code == 200:
             return response.json()
 
         raise BadStatusCode()
-
 
 class BadStatusCode(Exception):
     """The response has a bad status code response.

@@ -34,8 +34,8 @@ params_format = {
     'price': 'price',
     'average_price': 'base_price',
     'state': 'status',
-    'sales': 'sold_quantity',
-    'sales_in_cash': 'sold_quantity',
+    'sales': 'initial_quantity',
+    'sales_in_cash': 'initial_quantity',
     'free_shipping': lambda d: d['shipping']['free_shipping'],
     'stock': 'available_quantity',
 }

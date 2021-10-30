@@ -2,7 +2,7 @@ __author__ = "Scr44gr"
 from typing import Any, Dict
 import openpyxl
 from typing import Union
-
+from openpyxl.styles.fonts import Font
 JSONType = Union[str, Any]
 
 class ExcelFile:
@@ -11,7 +11,8 @@ class ExcelFile:
 
         self._file = openpyxl.load_workbook(filename)
         self.current_sheet = None
-    
+        self.style = lambda **k: Font(**k)
+
     def select_sheet(self, name: str) -> Dict:
 
         sheets = self._file.sheetnames
@@ -22,9 +23,12 @@ class ExcelFile:
         raise SheetNotFound()
     
     @property
-    def worksheet(self):
+    def worksheet(self) -> openpyxl.worksheet.worksheet.Worksheet:
         return self._file
 
+    def get_new_column_index(self):
+        new_columns_index = self.current_sheet.max_column + 1
+        return new_columns_index
 
 class SheetNotFound(Exception):
     """

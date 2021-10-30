@@ -9,7 +9,7 @@ import json
 from logging import getLogger, basicConfig
 from logging import INFO
 from datetime import datetime
-
+from time import sleep
 
 def get_uuid(target: str) -> str:
     if not isinstance(target, str):
@@ -46,6 +46,7 @@ def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[
         item = item['body']
         uuid = item.get('id')
         payload = {uuid: {}}
+        status_closed = item.get('status') in ['closed', 'paused', 'cancelled']
         for param in fetching_params:
             try:
                 if param == 'free_shipping':
@@ -53,6 +54,16 @@ def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[
                     payload[uuid][param] = 'Si' if free_shipping else 'No' # quick fix
                 else:
                     payload[uuid][param] = item[params_format[param]]
+
+                    if param == 'sales':
+                        payload[uuid][param] = item['initial_quantity'] - item['available_quantity']
+                    if status_closed:
+                        if param == 'sales':
+                            payload[uuid][param] = 0
+                    if item['sold_quantity'] == 0:
+                        if param == 'sales':
+                            payload[uuid][param] = 0
+
             except KeyError:
                 continue
         list_reference(payload)
@@ -62,22 +73,28 @@ def update_excel(filename: str, sheet_name: str, data: List[Dict], get_column, c
 
     excel = ExcelFile(filename)
     sheet = excel.select_sheet(sheet_name)
-    
+    date_column = excel.get_new_column_index()
     for i in range(len(data)):
         try:
             column_uuid = get_uuid(sheet.cell(row=i+1, column=get_column('title')+1))
             item = data[column_uuid]
             for key in item:
                 p_key = key
+                
                 if key == 'sales' and column_date_value:
-                    key = 'date'
-                sheet.cell(row=i+1, column=get_column(key)+1).value = item[p_key]
+                    column_index = date_column
+                else:
+                    column_index = get_column(key)+1
+                
+                sheet.cell(row=i+1, column=column_index).value = item[p_key]
         except AttributeError:
             continue
+
     if column_date_value is not None and len(column_date_value) >=1:
         date = datetime.now()
-        sheet.cell(row=1, column=get_column(column_date_value)+1).value = f'{date.day}-{DATE_TO[str(date.month)][0:3]}'
-    
+        sheet.cell(row=1, column=date_column).value = str(f'{date.day}-{DATE_TO[str(date.month)][0:3]}')
+        sheet.cell(row=1, column=date_column).font = excel.style(bold=True)
+
     context = lambda filename: (excel.worksheet.save(filename), excel.worksheet.close())
     return context
 
@@ -140,9 +157,12 @@ def main() -> None:
         _ = input('/> press enter to exit')
     except TypeError:
         raise Exception('Bad format on settings.json')
-
+    except PermissionError:
+        raise Exception('Permission denied, please close the excel save file and run the script again')
+    finally:
+        sleep(5)
 
 if __name__ == '__main__':
-    FORMAT = '%(asctime)-15s %(message)s'
+    FORMAT = '%(asctime)s %(message)s'
     basicConfig(format=FORMAT, level=INFO)
     main()
