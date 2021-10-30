@@ -2,6 +2,8 @@
 
 from typing import List, Union
 import requests
+from bs4 import BeautifulSoup
+
 
 requests.adapters.DEFAULT_RETRIES = 5
 
@@ -58,8 +60,40 @@ class MercadoLibre:
 
         raise BadStatusCode()
 
+class MercadoLibreWebCorrector:
+
+
+    def get_sales(self, url: str) -> List[str]:
+        """Get the sales of an item by its url
+
+        Args:
+            url (str): The url of the item
+
+        Returns:
+            List[str]: The sales of the item
+        """
+
+        response = requests.get(url,  headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0'})
+
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            # get numbers
+            # <span class="ui-pdp-subtitle">Nuevo  |  1254 vendidos</span>
+            # quick fix, need to improve.
+            try:
+                text = soup.find('div', {'class': 'ui-pdp-header__subtitle'}).find('span').text
+                numbers =[int(n) for n in text.split() if n.isdigit()][0]
+                return numbers or 0
+            except:
+                return 0
 class BadStatusCode(Exception):
     """The response has a bad status code response.
 
     """
-    pass
+    
+
+
+if __name__ == '__main__':
+    url = "https://articulo.mercadolibre.cl/MLC-482168573-pack-2-lampara-de-sal-del-himalaya-piedra-de-2-a-3-kg-_JM"
+    test = MercadoLibreWebCorrector()
+    print(test.get_sales(url))

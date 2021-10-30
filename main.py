@@ -1,6 +1,6 @@
 from typing import Dict, List, Union
 from src.commons import get_maximum_rows
-from src.mercadolibre import MercadoLibre
+from src.mercadolibre import MercadoLibre, MercadoLibreWebCorrector
 from src.utils import params_format
 from src.xlsx import ExcelFile
 from src.utils import DATE_TO
@@ -46,7 +46,9 @@ def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[
         item = item['body']
         uuid = item.get('id')
         payload = {uuid: {}}
-        status_closed = item.get('status') in ['closed', 'paused', 'cancelled']
+        status_closed = item.get('status') == 'closed'
+        permalink = item.get('permalink')
+        mercado_libre_corrector = MercadoLibreWebCorrector()
         for param in fetching_params:
             try:
                 if param == 'free_shipping':
@@ -55,14 +57,11 @@ def parse_data(data: List[Dict], fetching_params: Dict, list_reference) -> List[
                 else:
                     payload[uuid][param] = item[params_format[param]]
 
-                    if param == 'sales':
-                        payload[uuid][param] = item['initial_quantity'] - item['available_quantity']
+                    if param == 'sales' and not status_closed:
+                        payload[uuid][param] = mercado_libre_corrector.get_sales(permalink)
+                    
                     if status_closed:
-                        if param == 'sales':
-                            payload[uuid][param] = 0
-                    if item['sold_quantity'] == 0:
-                        if param == 'sales':
-                            payload[uuid][param] = 0
+                        payload[uuid][param] = 0
 
             except KeyError:
                 continue
