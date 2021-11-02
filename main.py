@@ -73,7 +73,8 @@ def update_excel(filename: str, sheet_name: str, data: List[Dict], get_column, c
     excel = ExcelFile(filename)
     sheet = excel.select_sheet(sheet_name)
     date_column = excel.get_new_column_index()
-    for i in range(len(data)):
+    size = len(data) + 5
+    for i in range(size):
         try:
             column_uuid = get_uuid(sheet.cell(row=i+1, column=get_column('title')+1))
             item = data[column_uuid]
@@ -88,6 +89,8 @@ def update_excel(filename: str, sheet_name: str, data: List[Dict], get_column, c
                 sheet.cell(row=i+1, column=column_index).value = item[p_key]
         except AttributeError:
             continue
+        except KeyError:
+            break
 
     if column_date_value is not None and len(column_date_value) >=1:
         date = datetime.now()
@@ -114,7 +117,7 @@ def main() -> None:
                 fetching_params: List[str] = sheet.get('fetching_params')
                 hyperlink_in : Union[str, bool] = sheet.get('hyperlink_in')
                 column_date_value: bool = sheet.get('column_date_value')
-                
+
                 logger.info(f'[*] getting ids from {sheet_name} sheet')
                 # we need to obtain the urls from the excel to extract the ids..
                 # ..to get the items info from the mcapi
