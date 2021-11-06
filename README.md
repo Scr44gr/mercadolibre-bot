@@ -1,6 +1,7 @@
 # mercadolibre-bot 🤖
-Un bot muy simple que se conecta con la api de mercado libre y actualiza un archivo xlsx.
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Scr44gr/mercadolibre-bot.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Scr44gr/mercadolibre-bot/context:python)
 
+Un bot muy simple que se conecta con la api de mercado libre y actualiza un archivo xlsx.
 
 ## Instalación 📝
 
