@@ -84,8 +84,9 @@ class MercadoLibreWebCorrector:
                 text = soup.find('div', {'class': 'ui-pdp-header__subtitle'}).find('span').text
                 numbers =[int(n) for n in text.split() if n.isdigit()][0]
                 return numbers or 0
-            except:
+            except AttributeError:
                 return 0
+
 class BadStatusCode(Exception):
     """The response has a bad status code response.
 
